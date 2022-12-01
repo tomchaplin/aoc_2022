@@ -12,11 +12,13 @@ fn fold_in_working(accum: Accumulator) -> Accumulator {
     if top[0] < working {
         top[0] = working;
     }
+    // Put the elements in order, smallest to largest
     top.sort();
     Accumulator { top, working: 0 }
 }
 
 fn find_top_n(n_to_find: usize) -> Vec<u32> {
+    // Read in the file and create iterator over lines
     let file = File::open("./data/input1").unwrap();
     let lines = io::BufReader::new(file).lines();
     let result = lines.fold(
@@ -26,6 +28,8 @@ fn find_top_n(n_to_find: usize) -> Vec<u32> {
         },
         |accum, line| {
             let contents = line.unwrap();
+            // Empty line means the working value is ready to be folded in
+            // Otherwise, we add the value of calories to the working value
             if contents.is_empty() {
                 fold_in_working(accum)
             } else {
