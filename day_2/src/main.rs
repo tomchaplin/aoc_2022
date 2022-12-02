@@ -48,6 +48,28 @@ fn determine_my_move(game: (Move, Outcome)) -> (Move, Move) {
     (game.0, my_move)
 }
 
+fn outcome_to_points(outcome: Outcome) -> u32 {
+    match outcome {
+        Outcome::Win => 6,
+        Outcome::Draw => 3,
+        Outcome::Lose => 0,
+    }
+}
+
+fn determine_outcome(game: (Move, Move)) -> Outcome {
+    match game {
+        (Move::Rock, Move::Rock) => Outcome::Draw,
+        (Move::Rock, Move::Paper) => Outcome::Win,
+        (Move::Rock, Move::Scissors) => Outcome::Lose,
+        (Move::Paper, Move::Rock) => Outcome::Lose,
+        (Move::Paper, Move::Paper) => Outcome::Draw,
+        (Move::Paper, Move::Scissors) => Outcome::Win,
+        (Move::Scissors, Move::Rock) => Outcome::Win,
+        (Move::Scissors, Move::Paper) => Outcome::Lose,
+        (Move::Scissors, Move::Scissors) => Outcome::Draw,
+    }
+}
+
 fn score_game(game: (Move, Move)) -> u32 {
     let (_, my_move) = &game;
     let move_score = match my_move {
@@ -55,17 +77,7 @@ fn score_game(game: (Move, Move)) -> u32 {
         Move::Paper => 2,
         Move::Scissors => 3,
     };
-    let win_score = match game {
-        (Move::Rock, Move::Rock) => 3,
-        (Move::Rock, Move::Paper) => 6,
-        (Move::Rock, Move::Scissors) => 0,
-        (Move::Paper, Move::Rock) => 0,
-        (Move::Paper, Move::Paper) => 3,
-        (Move::Paper, Move::Scissors) => 6,
-        (Move::Scissors, Move::Rock) => 6,
-        (Move::Scissors, Move::Paper) => 0,
-        (Move::Scissors, Move::Scissors) => 3,
-    };
+    let win_score = outcome_to_points(determine_outcome(game));
     move_score + win_score
 }
 
