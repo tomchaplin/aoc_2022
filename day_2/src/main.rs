@@ -92,14 +92,13 @@ fn read_lines() -> impl Iterator<Item = Vec<char>> {
 }
 
 fn parse_guide() -> impl Iterator<Item = (Move, Move)> {
-    read_lines().map(|vec_of_entries: Vec<char>| {
-        (abc_parser(vec_of_entries[0]), xyz_parser(vec_of_entries[1]))
-    })
+    read_lines()
+        .map(|vec_of_entries| (abc_parser(vec_of_entries[0]), xyz_parser(vec_of_entries[1])))
 }
 
 fn parse_guide2() -> impl Iterator<Item = (Move, Move)> {
     read_lines()
-        .map(|vec_of_entries: Vec<char>| {
+        .map(|vec_of_entries| {
             (
                 abc_parser(vec_of_entries[0]),
                 xyz_parser2(vec_of_entries[1]),
