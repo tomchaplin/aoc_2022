@@ -78,7 +78,7 @@ fn score_game(game: (Move, Move)) -> u32 {
     move_score + win_score
 }
 
-fn parse_guide() -> impl Iterator<Item = (Move, Move)> {
+fn read_lines() -> impl Iterator<Item = Vec<char>> {
     let file = File::open("./data/guide").unwrap();
     let lines = io::BufReader::new(file).lines();
     lines
@@ -88,23 +88,17 @@ fn parse_guide() -> impl Iterator<Item = (Move, Move)> {
             line.split(" ")
                 .map(|entry| entry.parse().unwrap())
                 .collect()
-        })
-        .map(|vec_of_entries: Vec<char>| {
-            (abc_parser(vec_of_entries[0]), xyz_parser(vec_of_entries[1]))
         })
 }
 
+fn parse_guide() -> impl Iterator<Item = (Move, Move)> {
+    read_lines().map(|vec_of_entries: Vec<char>| {
+        (abc_parser(vec_of_entries[0]), xyz_parser(vec_of_entries[1]))
+    })
+}
+
 fn parse_guide2() -> impl Iterator<Item = (Move, Move)> {
-    let file = File::open("./data/guide").unwrap();
-    let lines = io::BufReader::new(file).lines();
-    lines
-        .map(|line| line.unwrap())
-        .filter(|line| !line.is_empty())
-        .map(|line| {
-            line.split(" ")
-                .map(|entry| entry.parse().unwrap())
-                .collect()
-        })
+    read_lines()
         .map(|vec_of_entries: Vec<char>| {
             (
                 abc_parser(vec_of_entries[0]),
