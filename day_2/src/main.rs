@@ -9,50 +9,41 @@ enum Move {
 }
 
 #[derive(Debug)]
-enum Target {
+enum Outcome {
     Win,
     Draw,
     Lose,
 }
 
-fn abc_parser(letter: char) -> Move {
+fn move_parser(letter: char) -> Move {
     match letter {
-        'A' => Move::Rock,
-        'B' => Move::Paper,
-        'C' => Move::Scissors,
+        'A' | 'X' => Move::Rock,
+        'B' | 'Y' => Move::Paper,
+        'C' | 'Z' => Move::Scissors,
         _ => panic!(),
     }
 }
 
-fn xyz_parser(letter: char) -> Move {
+fn outcome_parser(letter: char) -> Outcome {
     match letter {
-        'X' => Move::Rock,
-        'Y' => Move::Paper,
-        'Z' => Move::Scissors,
+        'X' => Outcome::Lose,
+        'Y' => Outcome::Draw,
+        'Z' => Outcome::Win,
         _ => panic!(),
     }
 }
 
-fn xyz_parser2(letter: char) -> Target {
-    match letter {
-        'X' => Target::Lose,
-        'Y' => Target::Draw,
-        'Z' => Target::Win,
-        _ => panic!(),
-    }
-}
-
-fn determine_my_move(game: (Move, Target)) -> (Move, Move) {
+fn determine_my_move(game: (Move, Outcome)) -> (Move, Move) {
     let my_move = match &game {
-        (Move::Rock, Target::Win) => Move::Paper,
-        (Move::Rock, Target::Draw) => Move::Rock,
-        (Move::Rock, Target::Lose) => Move::Scissors,
-        (Move::Paper, Target::Win) => Move::Scissors,
-        (Move::Paper, Target::Draw) => Move::Paper,
-        (Move::Paper, Target::Lose) => Move::Rock,
-        (Move::Scissors, Target::Win) => Move::Rock,
-        (Move::Scissors, Target::Draw) => Move::Scissors,
-        (Move::Scissors, Target::Lose) => Move::Paper,
+        (Move::Rock, Outcome::Win) => Move::Paper,
+        (Move::Rock, Outcome::Draw) => Move::Rock,
+        (Move::Rock, Outcome::Lose) => Move::Scissors,
+        (Move::Paper, Outcome::Win) => Move::Scissors,
+        (Move::Paper, Outcome::Draw) => Move::Paper,
+        (Move::Paper, Outcome::Lose) => Move::Rock,
+        (Move::Scissors, Outcome::Win) => Move::Rock,
+        (Move::Scissors, Outcome::Draw) => Move::Scissors,
+        (Move::Scissors, Outcome::Lose) => Move::Paper,
     };
     (game.0, my_move)
 }
@@ -92,24 +83,32 @@ fn read_lines() -> impl Iterator<Item = Vec<char>> {
 }
 
 fn parse_guide() -> impl Iterator<Item = (Move, Move)> {
-    read_lines()
-        .map(|vec_of_entries| (abc_parser(vec_of_entries[0]), xyz_parser(vec_of_entries[1])))
+    read_lines().map(|vec_of_entries| {
+        (
+            move_parser(vec_of_entries[0]),
+            move_parser(vec_of_entries[1]),
+        )
+    })
 }
 
 fn parse_guide2() -> impl Iterator<Item = (Move, Move)> {
     read_lines()
         .map(|vec_of_entries| {
             (
-                abc_parser(vec_of_entries[0]),
-                xyz_parser2(vec_of_entries[1]),
+                move_parser(vec_of_entries[0]),
+                outcome_parser(vec_of_entries[1]),
             )
         })
         .map(|game| determine_my_move(game))
 }
 
+fn score_guide(guide: impl Iterator<Item = (Move, Move)>) -> u32 {
+    guide.map(|g| score_game(g)).sum()
+}
+
 fn main() {
-    let total1: u32 = parse_guide().map(|g| score_game(g)).sum();
-    let total2: u32 = parse_guide2().map(|g| score_game(g)).sum();
+    let total1 = score_guide(parse_guide());
+    let total2 = score_guide(parse_guide2());
     println!("{}", total1);
     println!("{}", total2);
 }
