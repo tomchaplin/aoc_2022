@@ -140,12 +140,12 @@ fn build_tree(lines: Vec<ParsedLine>) -> ArenaTree<ElfFile> {
                         working_node = 0;
                         continue;
                     }
-                    let children = tree.get_node(working_node).children.clone();
+                    let children = &tree.get_node(working_node).children;
                     let new_working_node = children
-                        .into_iter()
-                        .find(|idx| tree.get_node(*idx).val.name == dir_name)
+                        .iter()
+                        .find(|&idx| tree.get_node(*idx).val.name == dir_name)
                         .unwrap();
-                    working_node = new_working_node;
+                    working_node = *new_working_node;
                 }
             },
             ParsedLine::Listing(listing) => handle_listing(&mut tree, working_node, listing),
