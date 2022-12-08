@@ -91,43 +91,51 @@ fn compute_view_distance<'a>(iterator: impl Iterator<Item = &'a i32>, house_heig
     }
 }
 
-// TODO: Could short-circuit to 0 if any score is 0?
+fn on_edge(pos: (usize, usize), mat_size: (usize, usize)) -> bool {
+    pos.0 == 0 || pos.1 == 0 || pos.0 == mat_size.0 - 1 || pos.1 == mat_size.1 - 1
+}
+
 fn compute_scenic_score(board: &Vec<Vec<i32>>, pos: (usize, usize)) -> usize {
     let col_size = board.len();
     let row_size = board[0].len();
-    let row = pos.0;
-    let col = pos.1;
-    let house_height = board[row][col];
+    let base_row = pos.0;
+    let base_col = pos.1;
+    let house_height = board[base_row][base_col];
+
+    // Deal with edge cases first (where score is necessarily 0
+    if on_edge(pos, (row_size, col_size)) {
+        return 0;
+    }
+    // Compute view distance in each direction
+    // Not on edge means these iteators will always be non-empty
     let left_score = compute_view_distance(
-        (0..col).rev().map(|col_index| &board[row][col_index]),
+        (0..base_col)
+            .rev()
+            .map(|col_index| &board[base_row][col_index]),
         house_height,
     );
-    let right_score = if col < col_size - 1 {
-        compute_view_distance(
-            (col + 1..col_size).map(|col_index| &board[row][col_index]),
-            house_height,
-        )
-    } else {
-        0
-    };
+    let right_score = compute_view_distance(
+        (base_col + 1..col_size).map(|col| &board[base_row][col]),
+        house_height,
+    );
     let up_score = compute_view_distance(
-        (0..row).rev().map(|row_index| &board[row_index][col]),
+        (0..base_row)
+            .rev()
+            .map(|row_index| &board[row_index][base_col]),
         house_height,
     );
-    let down_score = if row < row_size - 1 {
-        compute_view_distance(
-            (row + 1..row_size).map(|row_index| &board[row_index][col]),
-            house_height,
-        )
-    } else {
-        0
-    };
+    let down_score = compute_view_distance(
+        (base_row + 1..row_size).map(|row| &board[row][base_col]),
+        house_height,
+    );
+    // Combine to scenic score
     left_score * right_score * up_score * down_score
 }
 
 fn compute_max_score(board: &Vec<Vec<i32>>) -> usize {
     let col_size = board.len();
     let row_size = board[0].len();
+    // Iterator over all matrix positions
     let index_iteator = (0..row_size)
         .map(|row| (0..col_size).map(move |col| (row, col)))
         .flatten();
