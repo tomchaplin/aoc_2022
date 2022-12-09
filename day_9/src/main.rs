@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 
 #[derive(Clone, Debug)]
-struct State {
+struct KnotState {
     head_pos: (i32, i32),
     tail_pos: (i32, i32),
     tail_history: Vec<(i32, i32)>,
@@ -12,19 +12,19 @@ struct State {
 #[derive(Clone, Debug)]
 struct KnotChain {
     length: usize,
-    knot_states: Vec<State>,
+    knot_states: Vec<KnotState>,
 }
 
 impl KnotChain {
     fn new(length: usize) -> Self {
         Self {
             length,
-            knot_states: vec![State::default(); length],
+            knot_states: vec![KnotState::default(); length],
         }
     }
 }
 
-impl Default for State {
+impl Default for KnotState {
     fn default() -> Self {
         Self {
             head_pos: (0, 0),
@@ -98,7 +98,9 @@ fn get_move(discrep: (i32, i32)) -> (i32, i32) {
     (get_sign(discrep.0), get_sign(discrep.1))
 }
 
-fn update_tail(mut state: State) -> State {
+// TODO: Separate out tail_history updating
+//       so that we only update the history of the final knot in the chain
+fn update_tail(mut state: KnotState) -> KnotState {
     let discrep = (
         state.head_pos.0 - state.tail_pos.0,
         state.head_pos.1 - state.tail_pos.1,
@@ -110,7 +112,7 @@ fn update_tail(mut state: State) -> State {
     state
 }
 
-fn update_state(mut current_state: State, head_move: Move) -> State {
+fn update_state(mut current_state: KnotState, head_move: Move) -> KnotState {
     match head_move {
         Move::Up => current_state.head_pos.0 += 1,
         Move::Down => current_state.head_pos.0 -= 1,
@@ -139,8 +141,8 @@ fn main() {
     let final_state_a = moves
         .clone()
         .into_iter()
-        .fold(State::default(), update_state);
-    let part_a = final_state_a.tail_history.into_iter().unique().count();
+        .fold(KnotState::default(), update_state);
+    let part_a = final_state_a.tail_history.iter().unique().count();
     println!("{}", part_a);
 
     let final_state_b = moves.into_iter().fold(KnotChain::new(9), update_knot_chain);
