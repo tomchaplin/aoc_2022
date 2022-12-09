@@ -59,10 +59,10 @@ fn parse_line(line: Vec<&str>) -> Vec<Move> {
 }
 
 fn read_lines() -> impl Iterator<Item = Move> {
-    let file = File::open("./data/input").unwrap();
+    let file = File::open("./data/input").expect("Input file not found");
     let lines = io::BufReader::new(file).lines();
     lines
-        .map(|line| line.unwrap())
+        .map(|line| line.expect("Couldn't read line of input"))
         .map(|line| {
             let split_line = line.split(" ").collect();
             let move_vec = parse_line(split_line);
@@ -137,6 +137,7 @@ fn update_knot_chain(mut current_chain: KnotChain, head_move: Move) -> KnotChain
         current_chain.knot_states[i].head_pos = current_chain.knot_states[i - 1].tail_pos;
         update_tail(&mut current_chain.knot_states[i]);
     }
+    // Only update the history of the last knot
     update_history(&mut current_chain.knot_states[current_chain.length - 1]);
     current_chain
 }
@@ -151,8 +152,14 @@ fn main() {
     let part_a = final_state_a.tail_history.iter().unique().count();
     println!("{}", part_a);
 
-    let final_state_b = moves.into_iter().fold(KnotChain::new(9), update_knot_chain);
-    let part_b = final_state_b.knot_states[8]
+    let n_knots = 9;
+    let final_state_b = moves
+        .into_iter()
+        .fold(KnotChain::new(n_knots), update_knot_chain);
+    let part_b = final_state_b
+        .knot_states
+        .last()
+        .expect("No last knot")
         .tail_history
         .iter()
         .unique()
