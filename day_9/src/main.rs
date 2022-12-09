@@ -98,7 +98,7 @@ fn get_move(discrep: (i32, i32)) -> (i32, i32) {
     (get_sign(discrep.0), get_sign(discrep.1))
 }
 
-fn update_head(state: &mut KnotState, head_move: Move) {
+fn update_head(state: &mut KnotState, head_move: &Move) {
     match head_move {
         Move::Up => state.head_pos.0 += 1,
         Move::Down => state.head_pos.0 -= 1,
@@ -121,14 +121,14 @@ fn update_history(state: &mut KnotState) {
     state.tail_history.push(state.tail_pos.clone());
 }
 
-fn update_state(mut state: KnotState, head_move: Move) -> KnotState {
+fn update_state(mut state: KnotState, head_move: &Move) -> KnotState {
     update_head(&mut state, head_move);
     update_tail(&mut state);
     update_history(&mut state);
     state
 }
 
-fn update_knot_chain(mut current_chain: KnotChain, head_move: Move) -> KnotChain {
+fn update_knot_chain(mut current_chain: KnotChain, head_move: &Move) -> KnotChain {
     // First we move the head
     update_head(&mut current_chain.knot_states[0], head_move);
     update_tail(&mut current_chain.knot_states[0]);
@@ -145,16 +145,13 @@ fn update_knot_chain(mut current_chain: KnotChain, head_move: Move) -> KnotChain
 fn main() {
     let moves: Vec<Move> = read_lines().collect();
 
-    let final_state_a = moves
-        .clone()
-        .into_iter()
-        .fold(KnotState::default(), update_state);
+    let final_state_a = moves.iter().fold(KnotState::default(), update_state);
     let part_a = final_state_a.tail_history.iter().unique().count();
     println!("{}", part_a);
 
     let n_knots = 9;
     let final_state_b = moves
-        .into_iter()
+        .iter()
         .fold(KnotChain::new(n_knots), update_knot_chain);
     let part_b = final_state_b
         .knot_states
