@@ -4,9 +4,9 @@ use std::io::{self, BufRead};
 
 #[derive(Clone, Debug)]
 struct State {
-    head_pos: (isize, isize),
-    tail_pos: (isize, isize),
-    tail_history: Vec<(isize, isize)>,
+    head_pos: (i32, i32),
+    tail_pos: (i32, i32),
+    tail_history: Vec<(i32, i32)>,
 }
 
 #[derive(Clone, Debug)]
@@ -53,9 +53,9 @@ fn move_parser(move_str: &str) -> Move {
 }
 
 fn parse_line(line: Vec<&str>) -> Vec<Move> {
-    let count: isize = line[1].parse().expect("Bad number of moves");
+    let count: usize = line[1].parse().expect("Bad number of moves");
     let head_move = move_parser(line[0]);
-    vec![head_move; count as usize]
+    vec![head_move; count]
 }
 
 fn read_lines() -> impl Iterator<Item = Move> {
@@ -71,7 +71,7 @@ fn read_lines() -> impl Iterator<Item = Move> {
         .flatten()
 }
 
-fn get_sign(input: isize) -> isize {
+fn get_sign(input: i32) -> i32 {
     if input >= 1 {
         1
     } else if input <= -1 {
@@ -81,7 +81,7 @@ fn get_sign(input: isize) -> isize {
     }
 }
 
-fn get_move(discrep: (isize, isize)) -> (isize, isize) {
+fn get_move(discrep: (i32, i32)) -> (i32, i32) {
     let has_horiz_discrep = discrep.0 != 0;
     let has_vert_discrep = discrep.1 != 0;
     let horiz_differ_by_1 = discrep.0.abs() == 1;
