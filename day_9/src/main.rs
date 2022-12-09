@@ -2,6 +2,14 @@ use itertools::Itertools;
 use std::fs::File;
 use std::io::{self, BufRead};
 
+#[derive(Clone, Copy, Debug)]
+enum Move {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 #[derive(Clone, Debug)]
 struct KnotState {
     head_pos: (i32, i32),
@@ -15,15 +23,6 @@ struct KnotChain {
     knot_states: Vec<KnotState>,
 }
 
-impl KnotChain {
-    fn new(length: usize) -> Self {
-        Self {
-            length,
-            knot_states: vec![KnotState::default(); length],
-        }
-    }
-}
-
 impl Default for KnotState {
     fn default() -> Self {
         Self {
@@ -34,12 +33,13 @@ impl Default for KnotState {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-enum Move {
-    Up,
-    Down,
-    Left,
-    Right,
+impl KnotChain {
+    fn new(length: usize) -> Self {
+        Self {
+            length,
+            knot_states: vec![KnotState::default(); length],
+        }
+    }
 }
 
 fn move_parser(move_str: &str) -> Move {
@@ -98,9 +98,16 @@ fn get_move(discrep: (i32, i32)) -> (i32, i32) {
     (get_sign(discrep.0), get_sign(discrep.1))
 }
 
-// TODO: Separate out tail_history updating
-//       so that we only update the history of the final knot in the chain
-fn update_tail(mut state: KnotState) -> KnotState {
+fn update_head(state: &mut KnotState, head_move: Move) {
+    match head_move {
+        Move::Up => state.head_pos.0 += 1,
+        Move::Down => state.head_pos.0 -= 1,
+        Move::Left => state.head_pos.1 -= 1,
+        Move::Right => state.head_pos.1 += 1,
+    }
+}
+
+fn update_tail(state: &mut KnotState) {
     let discrep = (
         state.head_pos.0 - state.tail_pos.0,
         state.head_pos.1 - state.tail_pos.1,
@@ -108,30 +115,29 @@ fn update_tail(mut state: KnotState) -> KnotState {
     let tail_move = get_move(discrep);
     state.tail_pos.0 += tail_move.0;
     state.tail_pos.1 += tail_move.1;
+}
+
+fn update_history(state: &mut KnotState) {
     state.tail_history.push(state.tail_pos.clone());
+}
+
+fn update_state(mut state: KnotState, head_move: Move) -> KnotState {
+    update_head(&mut state, head_move);
+    update_tail(&mut state);
+    update_history(&mut state);
     state
 }
 
-fn update_state(mut current_state: KnotState, head_move: Move) -> KnotState {
-    match head_move {
-        Move::Up => current_state.head_pos.0 += 1,
-        Move::Down => current_state.head_pos.0 -= 1,
-        Move::Left => current_state.head_pos.1 -= 1,
-        Move::Right => current_state.head_pos.1 += 1,
-    }
-    current_state = update_tail(current_state);
-    return current_state;
-}
-
-// TODO: Avoid cloning in this function
 fn update_knot_chain(mut current_chain: KnotChain, head_move: Move) -> KnotChain {
     // First we move the head
-    current_chain.knot_states[0] = update_state(current_chain.knot_states[0].clone(), head_move);
+    update_head(&mut current_chain.knot_states[0], head_move);
+    update_tail(&mut current_chain.knot_states[0]);
     // Now we pass the tail of i-1 to the head of i and update the tail of i
     for i in 1..current_chain.length {
         current_chain.knot_states[i].head_pos = current_chain.knot_states[i - 1].tail_pos;
-        current_chain.knot_states[i] = update_tail(current_chain.knot_states[i].clone());
+        update_tail(&mut current_chain.knot_states[i]);
     }
+    update_history(&mut current_chain.knot_states[current_chain.length - 1]);
     current_chain
 }
 
