@@ -109,14 +109,7 @@ fn determine_target(item: u64, test: &MonkeyTest) -> usize {
     }
 }
 
-fn play(mob: &mut MonkeyMob, should_bore: bool) {
-    let lcm_of_divisors: u64 = mob
-        .mob
-        .iter()
-        .map(|monkey| monkey.test.divisor)
-        .fold(1, |working_lcm, next_divisor| {
-            lcm(working_lcm, next_divisor)
-        });
+fn play(mob: &mut MonkeyMob, should_bore: bool, mob_lcm: u64) {
     let working_monkey = &mut mob.mob[mob.current];
     if let Ok(item) = working_monkey.items.remove() {
         let mut new_worry = apply_operation(item, &working_monkey.op);
@@ -125,7 +118,7 @@ fn play(mob: &mut MonkeyMob, should_bore: bool) {
             new_worry = get_bored(new_worry);
         }
         // Modulo by all divisiblity test to prevent blow up
-        new_worry = new_worry % lcm_of_divisors;
+        new_worry = new_worry % mob_lcm;
         let target = determine_target(new_worry, &working_monkey.test);
         let target_monkey = &mut mob.mob[target];
         target_monkey
@@ -143,10 +136,20 @@ fn play(mob: &mut MonkeyMob, should_bore: bool) {
     }
 }
 
+fn get_lcm(mob: &MonkeyMob) -> u64 {
+    mob.mob
+        .iter()
+        .map(|monkey| monkey.test.divisor)
+        .fold(1, |working_lcm, next_divisor| {
+            lcm(working_lcm, next_divisor)
+        })
+}
+
 fn part_a() {
     let mut mob = parse_mob();
+    let mob_lcm = get_lcm(&mob);
     while mob.round <= 20 {
-        play(&mut mob, true);
+        play(&mut mob, true, mob_lcm);
     }
     let mut inspecteds: Vec<u64> = mob.mob.iter().map(|monkey| monkey.inspected).collect();
     inspecteds.sort_by_key(|w| Reverse(*w)); // Decreasing sort
@@ -156,8 +159,9 @@ fn part_a() {
 
 fn part_b() {
     let mut mob = parse_mob();
+    let mob_lcm = get_lcm(&mob);
     while mob.round <= 10000 {
-        play(&mut mob, false);
+        play(&mut mob, false, mob_lcm);
     }
     let mut inspecteds: Vec<u64> = mob.mob.iter().map(|monkey| monkey.inspected).collect();
     inspecteds.sort_by_key(|w| Reverse(*w)); // Decreasing sort
