@@ -145,16 +145,19 @@ fn get_lcm(mob: &MonkeyMob) -> u64 {
         })
 }
 
+fn compute_monkey_business(mob: &MonkeyMob) -> u64 {
+    let mut inspecteds: Vec<u64> = mob.mob.iter().map(|monkey| monkey.inspected).collect();
+    inspecteds.sort_by_key(|w| Reverse(*w)); // Decreasing sort
+    inspecteds[0] * inspecteds[1]
+}
+
 fn part_a() {
     let mut mob = parse_mob();
     let mob_lcm = get_lcm(&mob);
     while mob.round <= 20 {
         play(&mut mob, true, mob_lcm);
     }
-    let mut inspecteds: Vec<u64> = mob.mob.iter().map(|monkey| monkey.inspected).collect();
-    inspecteds.sort_by_key(|w| Reverse(*w)); // Decreasing sort
-    let monkey_business = inspecteds[0] * inspecteds[1];
-    println!("{}", monkey_business)
+    println!("{}", compute_monkey_business(&mob));
 }
 
 fn part_b() {
@@ -163,10 +166,7 @@ fn part_b() {
     while mob.round <= 10000 {
         play(&mut mob, false, mob_lcm);
     }
-    let mut inspecteds: Vec<u64> = mob.mob.iter().map(|monkey| monkey.inspected).collect();
-    inspecteds.sort_by_key(|w| Reverse(*w)); // Decreasing sort
-    let monkey_business = inspecteds[0] * inspecteds[1];
-    println!("{}", monkey_business)
+    println!("{}", compute_monkey_business(&mob));
 }
 
 fn main() {
