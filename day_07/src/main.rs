@@ -3,7 +3,6 @@ use std::io::{self, BufRead};
 
 #[derive(Debug)]
 struct Node<T> {
-    idx: usize,
     val: T,
     parent: Option<usize>,
     children: Vec<usize>,
@@ -19,7 +18,6 @@ impl<T> ArenaTree<T> {
         // Add new node to tree
         let new_idx = self.arena.len();
         let new_node = Node {
-            idx: new_idx,
             val,
             parent,
             children: vec![],
@@ -182,13 +180,13 @@ fn main() {
 
     let mut sizes_vec: Vec<u32> = sizes.collect();
     sizes_vec.sort();
-    println!("{:#?}", sizes_vec);
+    //println!("{:#?}", sizes_vec);
     let part_b = sizes_vec
         .into_iter()
         .find(|&size| size >= need_to_delete)
         .unwrap();
 
     println!("{}", part_a);
-    println!("{}", need_to_delete);
+    //println!("{}", need_to_delete);
     println!("{}", part_b);
 }
