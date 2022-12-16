@@ -5,6 +5,7 @@ use petgraph::visit::IntoNodeReferences;
 use std::fs::File;
 use std::io::{self, BufRead};
 
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -15,7 +16,7 @@ struct TunnelNode {
     neighbours: Vec<usize>,
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 struct GameState {
     start: usize,
     remaining: Vec<usize>,
@@ -114,11 +115,11 @@ fn build_graph(nodes: &Vec<TunnelNode>) -> DiGraph<(String, u32), ()> {
     graph
 }
 
-fn compute_additional_flow(
+fn compute_additional_flow_immut(
     flows: &Vec<u32>,
     distances: &Vec<Vec<u32>>,
-    state: GameState,
-    scratchpad: &mut HashMap<GameState, u32>,
+    state: &GameState,
+    scratchpad: &HashMap<GameState, u32>,
 ) -> u32 {
     let remaining = &state.remaining;
     let time_remaining = state.time_remaining;
@@ -142,10 +143,10 @@ fn compute_additional_flow(
             let time_with_valve_on = time_remaining - time_needed;
             let total_release = time_with_valve_on * flows[*next_valve];
             total_release
-                + compute_additional_flow(
+                + compute_additional_flow_immut(
                     flows,
                     distances,
-                    GameState {
+                    &GameState {
                         start: *next_valve,
                         remaining: remaining_after_valve,
                         time_remaining: time_with_valve_on,
@@ -155,6 +156,16 @@ fn compute_additional_flow(
         })
         .max()
         .unwrap();
+    max_add_flow
+}
+
+fn compute_additional_flow(
+    flows: &Vec<u32>,
+    distances: &Vec<Vec<u32>>,
+    state: GameState,
+    scratchpad: &mut HashMap<GameState, u32>,
+) -> u32 {
+    let max_add_flow = compute_additional_flow_immut(flows, distances, &state, scratchpad);
     scratchpad.insert(state, max_add_flow);
     max_add_flow
 }
@@ -198,6 +209,7 @@ fn main() {
     println!("{}", max_flow);
     // Part B
     let max_two_flow = partitions((0..flows.len()).collect())
+        .par_bridge()
         .map(|(left, right)| {
             let left_state = GameState {
                 start: n_nodes - 1,
@@ -210,9 +222,9 @@ fn main() {
                 time_remaining: 26,
             };
             let left_flow =
-                compute_additional_flow(&flows, &distances, left_state, &mut scratchpad);
+                compute_additional_flow_immut(&flows, &distances, &left_state, &scratchpad);
             let right_flow =
-                compute_additional_flow(&flows, &distances, right_state, &mut scratchpad);
+                compute_additional_flow_immut(&flows, &distances, &right_state, &scratchpad);
             left_flow + right_flow
         })
         .max()
