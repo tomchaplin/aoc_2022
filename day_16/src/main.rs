@@ -5,7 +5,9 @@ use petgraph::visit::IntoNodeReferences;
 
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::sync::{Arc, Mutex};
 
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
@@ -249,7 +251,7 @@ fn apply_move_pair(
 fn compute_additional_flow_b(
     nodes: &Vec<TunnelNode>,
     state: GameState,
-    scratchpad: &mut HashMap<GameState, u32>,
+    scratchpad: &mut Arc<Mutex<HashMap<GameState, u32>>>,
 ) -> u32 {
     let num_closed_valves = state.closed_valves.len();
     // No more valves to turn or run out of time
@@ -257,10 +259,10 @@ fn compute_additional_flow_b(
         return 0;
     }
     // Check memos
-    if let Some(add_flow) = scratchpad.get(&state) {
+    if let Some(add_flow) = scratchpad.lock().unwrap().get(&state) {
         return *add_flow;
     }
-    if let Some(add_flow) = scratchpad.get(&GameState {
+    if let Some(add_flow) = scratchpad.lock().unwrap().get(&GameState {
         positions: (state.positions.1, state.positions.0),
         closed_valves: state.closed_valves.clone(),
         time_remaining: state.time_remaining,
@@ -273,23 +275,23 @@ fn compute_additional_flow_b(
     // Find move with maximal add_flow + additional_flow_b(new_state)
     let possible_moves = get_move_pairs(nodes, &state);
     let max_add_flow = possible_moves
-        .iter()
+        .par_iter()
         .map(|move_pair| {
             let (new_state, add_flow) = apply_move_pair(nodes, &state, move_pair);
-            add_flow + compute_additional_flow_b(nodes, new_state, scratchpad)
+            add_flow + compute_additional_flow_b(nodes, new_state, &mut Arc::clone(&scratchpad))
         })
         .max()
         .unwrap();
     // Insert into scratchpad
-    scratchpad.insert(state, max_add_flow);
+    scratchpad.lock().unwrap().insert(state, max_add_flow);
     max_add_flow
 }
 
 fn part_b() {
     let nodes = read_network();
     let start_node = nodes.iter().position(|node| node.name == "AA").unwrap();
-    let mut scratchpad = HashMap::default();
-    // Start by assuming all 0 flow nodes are empty
+    let mut scratchpad = Arc::new(Mutex::new(HashMap::default()));
+    // Start by assuming all 0 flow nodes are open already
     let closed_valves = nodes
         .iter()
         .enumerate()
@@ -309,6 +311,6 @@ fn part_b() {
 }
 
 fn main() {
-    //part_a();
+    part_a();
     part_b();
 }
