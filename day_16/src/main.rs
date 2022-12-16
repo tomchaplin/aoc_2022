@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use petgraph::algo::dijkstra;
 use petgraph::prelude::*;
 use petgraph::visit::IntoNodeReferences;
@@ -7,9 +8,15 @@ use std::io::{self, BufRead};
 
 use std::collections::HashMap;
 
+#[derive(Clone, Copy)]
+enum Move {
+    TurnValve(usize),
+    Move(usize),
+}
+
+#[derive(PartialEq, Eq, Hash, Clone)]
 struct GameState {
-    elephant_pos: usize,
-    my_pos: usize,
+    positions: (usize, usize),
     closed_valves: Vec<usize>,
     time_remaining: u32,
 }
@@ -156,7 +163,7 @@ fn compute_additional_flow(
     max_add_flow
 }
 
-fn main() {
+fn part_a() {
     let nodes = read_network();
     let graph = build_graph(&nodes);
     let (flows, distances) = compute_critical(graph);
@@ -173,4 +180,135 @@ fn main() {
         &mut scratchpad,
     );
     println!("{}", max_flow);
+}
+
+// TODO: Degrossify
+fn get_move_pairs(nodes: &Vec<TunnelNode>, state: &GameState) -> Vec<(Move, Move)> {
+    let mut possible_moves0 = vec![];
+    let current_pos = state.positions.0;
+    let current_node = &nodes[current_pos];
+    if state.closed_valves.contains(&current_pos) {
+        possible_moves0.push(Move::TurnValve(current_pos));
+    }
+    for node in current_node.neighbours.iter() {
+        possible_moves0.push(Move::Move(*node));
+    }
+    let mut possible_moves1 = vec![];
+    let current_pos = state.positions.1;
+    let current_node = &nodes[current_pos];
+    if state.closed_valves.contains(&current_pos) {
+        possible_moves1.push(Move::TurnValve(current_pos));
+    }
+    for node in current_node.neighbours.iter() {
+        possible_moves1.push(Move::Move(*node));
+    }
+    possible_moves0
+        .iter()
+        .flat_map(|move0| possible_moves1.iter().map(|move1| (*move0, *move1)))
+        .collect()
+}
+
+fn apply_move_pair(
+    nodes: &Vec<TunnelNode>,
+    state: &GameState,
+    move_pair: &(Move, Move),
+) -> (GameState, u32) {
+    let mut new_state = (*state).clone();
+    // Update positions and get list of opened valves
+    let mut opened_valves = vec![];
+    match move_pair.0 {
+        Move::TurnValve(pos) => {
+            opened_valves.push(pos);
+        }
+        Move::Move(new_pos) => {
+            new_state.positions.0 = new_pos;
+        }
+    };
+    match move_pair.1 {
+        Move::TurnValve(pos) => {
+            opened_valves.push(pos);
+        }
+        Move::Move(new_pos) => {
+            new_state.positions.1 = new_pos;
+        }
+    };
+    opened_valves = opened_valves.into_iter().unique().collect();
+    // Open up valves and figure out additional flow rate
+    let mut additional_flow_rate = 0;
+    for valve in opened_valves {
+        additional_flow_rate += nodes[valve].flow;
+        new_state.closed_valves.retain(|&elem| elem != valve);
+    }
+    // Decrement time remaining
+    new_state.time_remaining = new_state.time_remaining - 1;
+    // Figure out flow added by new valves
+    let add_flow = additional_flow_rate * new_state.time_remaining;
+    (new_state, add_flow)
+}
+
+fn compute_additional_flow_b(
+    nodes: &Vec<TunnelNode>,
+    state: GameState,
+    scratchpad: &mut HashMap<GameState, u32>,
+) -> u32 {
+    let num_closed_valves = state.closed_valves.len();
+    // No more valves to turn or run out of time
+    if state.closed_valves.is_empty() || state.time_remaining == 0 {
+        return 0;
+    }
+    // Check memos
+    if let Some(add_flow) = scratchpad.get(&state) {
+        return *add_flow;
+    }
+    if let Some(add_flow) = scratchpad.get(&GameState {
+        positions: (state.positions.1, state.positions.0),
+        closed_valves: state.closed_valves.clone(),
+        time_remaining: state.time_remaining,
+    }) {
+        return *add_flow;
+    }
+
+    // Iterate over all possible over all possible move lists
+    // Apply move_list to determine (new_state, add_flow)
+    // Find move with maximal add_flow + additional_flow_b(new_state)
+    let possible_moves = get_move_pairs(nodes, &state);
+    let max_add_flow = possible_moves
+        .iter()
+        .map(|move_pair| {
+            let (new_state, add_flow) = apply_move_pair(nodes, &state, move_pair);
+            add_flow + compute_additional_flow_b(nodes, new_state, scratchpad)
+        })
+        .max()
+        .unwrap();
+    // Insert into scratchpad
+    scratchpad.insert(state, max_add_flow);
+    max_add_flow
+}
+
+fn part_b() {
+    let nodes = read_network();
+    let start_node = nodes.iter().position(|node| node.name == "AA").unwrap();
+    let mut scratchpad = HashMap::default();
+    // Start by assuming all 0 flow nodes are empty
+    let closed_valves = nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.flow > 0)
+        .map(|(idx, _)| idx)
+        .collect();
+    let max_flow = compute_additional_flow_b(
+        &nodes,
+        GameState {
+            positions: (start_node, start_node),
+            closed_valves,
+            time_remaining: 26,
+        },
+        &mut scratchpad,
+    );
+    println!("{}", max_flow);
+}
+
+fn main() {
+    //part_a();
+    part_b();
 }
