@@ -19,6 +19,7 @@ struct MinerState {
     robots_made: (u32, u32, u32, u32),
     robots_in_prod: (u32, u32, u32, u32),
     time_remaining: u32,
+    running_total: u32,
 }
 
 impl MinerState {
@@ -28,6 +29,7 @@ impl MinerState {
             robots_made: (1, 0, 0, 0),
             robots_in_prod: (0, 0, 0, 0),
             time_remaining: time,
+            running_total: 0,
         }
     }
 
@@ -35,6 +37,7 @@ impl MinerState {
         self.inventory.0 >= cost.0 && self.inventory.1 >= cost.1 && self.inventory.2 >= cost.2
     }
 
+    // TODO: Filter out builds that would give us more production than we could possibly use
     fn possible_builds<'a>(
         &'a self,
         costs: &'a Costs,
@@ -63,6 +66,7 @@ impl MinerState {
         }
     }
 
+    // TODO: Cap inventory at maximum usage?
     // Collect resources, add robots_in_prod to robots_made and decrement time
     // Return additional geodes mined
     fn advance(&mut self) -> u32 {
@@ -86,22 +90,29 @@ impl MinerState {
         return geodes_mined;
     }
 
-    fn compute_max_additional_geodes(
+    //TODO: Change iteration so we fix a _possible_ target then iterate until we can build that
+    fn compute_max_total_geodes(
         &self,
         costs: &Costs,
+        running_max: &mut u32,
         scratchpad: &mut HashMap<MinerState, u32>,
     ) -> u32 {
         if self.time_remaining == 0 {
-            return 0;
+            return self.running_total;
+        }
+        let geodes_from_current = self.robots_made.3 * self.time_remaining;
+        let optimisitic_geodes_from_future = self.time_remaining * (self.time_remaining - 1);
+        let absolute_max =
+            self.running_total + geodes_from_current + optimisitic_geodes_from_future;
+        if absolute_max <= *running_max {
+            scratchpad.insert(self.clone(), *running_max);
+            return *running_max;
         }
         if let Some(add_geodes) = scratchpad.get(self) {
             return *add_geodes;
         }
-        // TODO: Add a short-circuit along the lines of
-        // If this is a strictly worse scenario than we've seen before, return 0
-        // TODO: Add a short-circuit along the lines of
-        // If we will never be able to build another geode miner then we can figure out our final scenario
-        let max_geodes = self
+        // Possible improvements
+        let max_total_geodes = self
             .possible_builds(costs)
             .map(|target| {
                 let mut after_building = self.clone();
@@ -109,14 +120,18 @@ impl MinerState {
                     after_building.initiate_build(&target, costs);
                 }
                 let geodes_from_this_round = after_building.advance();
-                let geodes_from_future_rounds =
-                    after_building.compute_max_additional_geodes(costs, scratchpad);
-                return geodes_from_this_round + geodes_from_future_rounds;
+                after_building.running_total += geodes_from_this_round;
+                let next_max =
+                    after_building.compute_max_total_geodes(costs, running_max, scratchpad);
+                return next_max;
             })
             .max()
             .unwrap();
-        scratchpad.insert(self.clone(), max_geodes);
-        max_geodes
+        scratchpad.insert(self.clone(), max_total_geodes);
+        if max_total_geodes > *running_max {
+            *running_max = max_total_geodes;
+        }
+        max_total_geodes
     }
 }
 
@@ -127,7 +142,8 @@ type RobotCost = (u32, u32, u32);
 fn n_geodes(idx: usize, time: u32, costs: &Costs) -> u32 {
     let mut scratchpad = HashMap::new();
     let miner = MinerState::new(time);
-    let max_n_geodes = miner.compute_max_additional_geodes(&costs, &mut scratchpad);
+    let mut running_max = 0;
+    let max_n_geodes = miner.compute_max_total_geodes(&costs, &mut running_max, &mut scratchpad);
     println!("Finished idx {}", idx);
     max_n_geodes
 }
@@ -188,6 +204,6 @@ fn part_b() {
 }
 
 fn main() {
-    //part_a()
-    part_b()
+    part_a();
+    part_b();
 }
